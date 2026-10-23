@@ -116,6 +116,14 @@ with tab2:
     op_iter = st.radio("Selecciona el algoritmo:", ["Jacobi", "Gauss-Seidel"])
     
     if st.button("Ejecutar Iteraciones"):
+        st.subheader(f"👨‍🏫 Fundamento Matemático: {op_iter}")
+        if op_iter == "Jacobi":
+            st.info("En el método de Jacobi, los valores de la nueva iteración se calculan usando únicamente los valores de la iteración anterior.")
+            st.latex(r"x_i^{(k+1)} = \frac{1}{a_{ii}} \left( b_i - \sum_{j \neq i} a_{ij} x_j^{(k)} \right)")
+        else:
+            st.info("En el método de Gauss-Seidel, los valores recién calculados se utilizan inmediatamente en la misma iteración para acelerar la convergencia.")
+            st.latex(r"x_i^{(k+1)} = \frac{1}{a_{ii}} \left( b_i - \sum_{j=1}^{i-1} a_{ij} x_j^{(k+1)} - \sum_{j=i+1}^{n} a_{ij} x_j^{(k)} \right)")
+            
         st.subheader("Desarrollo paso a paso:")
         x = np.zeros(n_iter)
         x_old = np.zeros(n_iter)
@@ -152,6 +160,10 @@ with tab2:
 # =====================================================================
 with tab3:
     st.header("Método de Bisección (Búsqueda de Raíces)")
+    
+    st.info("Basado en el **Teorema del Valor Intermedio (Bolzano)**. Si $f(a) \cdot f(b) < 0$, existe al menos una raíz en el intervalo $[a, b]$.")
+    st.latex(r"c = \frac{a + b}{2} \quad \text{Error} = \left| \frac{b - a}{2} \right|")
+    
     formula = st.text_input("Ingresa la función f(x):", value="x**3 - x - 2")
     
     col1, col2, col3, col4 = st.columns(4)
@@ -173,13 +185,20 @@ with tab3:
             if fa * fb > 0:
                 st.error("f(a) y f(b) tienen el mismo signo. Elige otro intervalo.")
             else:
-                st.subheader("Tabla de Iteraciones:")
+                st.subheader("👨‍🏫 Desarrollo de Iteraciones:")
                 c_final = None
                 for k in range(int(max_bis)):
                     c = (a + b) / 2
                     fc = evaluar(c, formula)
                     err = abs(b - a) / 2
-                    st.text(f"Iter {k+1} | a={a:.4f}, b={b:.4f} | c={c:.4f} | f(c)={fc:.4f} | Error={err:.4f}")
+                    
+                    # Decisión paso a paso
+                    if fa * fc < 0:
+                        decision = "f(a)*f(c) < 0 ➔ b cambia a c"
+                    else:
+                        decision = "f(a)*f(c) > 0 ➔ a cambia a c"
+                        
+                    st.markdown(f"**Iter {k+1}:** $c = \\frac{{{a:.4f} + {b:.4f}}}{{2}} = {c:.4f}$ | $f(c) = {fc:.4f}$ | Err= {err:.4f} | _{decision}_")
                     
                     if err < tol_bis or abs(fc) < 1e-9:
                         c_final = c
@@ -191,7 +210,6 @@ with tab3:
                         a = c
                         fa = fc
                 
-                # Generar Gráfica integrada directamente en la web
                 st.subheader("Visualización Gráfica:")
                 fig, ax = plt.subplots(figsize=(8, 4))
                 x_pts = np.linspace(a_val - 1, b_val + 1, 300)
@@ -207,8 +225,6 @@ with tab3:
                 ax.set_ylabel("f(x)")
                 ax.legend()
                 ax.grid(True)
-                
-                # Streamlit dibuja la gráfica automáticamente en la página
                 st.pyplot(fig)
                 
         except Exception as ex:

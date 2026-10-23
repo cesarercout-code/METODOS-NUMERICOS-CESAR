@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 # Configuración de la página web
 st.set_page_config(page_title="Métodos Numéricos de Cesar", layout="wide")
 
-st.title("📊 Métodos Numéricos de Denisse para todos")
+st.title("📊 Métodos Numéricos de Cesar Ramirez")
 st.write("Herramienta interactiva para matrices, sistemas de ecuaciones, iteraciones y búsqueda de raíces.")
 
 # Creamos pestañas (Tabs) en la página web para organizar los métodos
@@ -14,6 +14,15 @@ tab1, tab2, tab3 = st.tabs(["🧮 Sistemas Directos", "🔄 Métodos Iterativos"
 # =====================================================================
 # PESTAÑA 1: SISTEMAS DIRECTOS (Cramer, Gauss, LU)
 # =====================================================================
+def matrix_to_latex(mat):
+    """Función auxiliar para convertir matrices de numpy a formato LaTeX"""
+    if mat.ndim == 1:
+        mat = mat.reshape(-1, 1)
+    lines = []
+    for row in mat:
+        lines.append(" & ".join([f"{val:.3f}" for val in row]))
+    return "\\begin{bmatrix} " + " \\\\ ".join(lines) + " \\end{bmatrix}"
+
 with tab1:
     st.header("Resolución de Sistemas de Ecuaciones")
     n = st.number_input("Selecciona el tamaño de la matriz (n):", min_value=2, max_value=6, value=3, step=1)
@@ -41,50 +50,88 @@ with tab1:
     metodo_sel = st.selectbox("Elige el método:", ["Cramer", "Gauss", "Factorización LU"])
     
     if st.button("Resolver Sistema Directo"):
-        st.subheader("Procedimiento y Resultados:")
         if metodo_sel == "Cramer":
+            st.subheader("👨‍🏫 Fundamento Matemático: Regla de Cramer")
+            st.info("La Regla de Cramer establece que la solución de un sistema se encuentra dividiendo el determinante de matrices modificadas (donde se reemplaza la columna $i$ por el vector de resultados $B$) entre el determinante de la matriz original $A$.")
+            st.latex(r"x_i = \frac{\det(A_i)}{\det(A)}")
+            
+            st.subheader("Desarrollo paso a paso:")
             det_A = np.linalg.det(A)
-            st.write(f"**Determinante Principal (Det_A):** {det_A:.4f}")
+            st.markdown("**1. Matriz original y Determinante Principal ($\det(A)$):**")
+            st.latex(f"A = {matrix_to_latex(A)} \\implies \det(A) = {det_A:.4f}")
+            
             if abs(det_A) < 1e-9:
                 st.error("El determinante es 0. El sistema no tiene solución única.")
             else:
+                st.markdown("**2. Cálculo de incógnitas sustituyendo el vector B:**")
                 for i in range(n):
                     A_mod = A.copy()
                     A_mod[:, i] = B
                     det_i = np.linalg.det(A_mod)
                     x_i = det_i / det_A
-                    st.write(f"* x{i+1} = Det_x{i+1} / Det_A = {det_i:.4f} / {det_A:.4f} = **{x_i:.4f}**")
+                    
+                    st.markdown(f"$\circ \quad$ **Cálculo de $x_{i+1}$**: Sustituyendo la columna {i+1} por el vector de resultados $B$:")
+                    st.latex(f"A_{{{i+1}}} = {matrix_to_latex(A_mod)} \\implies \det(A_{{{i+1}}}) = {det_i:.4f}")
+                    st.latex(f"x_{{{i+1}}} = \\frac{{\det(A_{{{i+1}}})}}{{\det(A)}} = \\frac{{{det_i:.4f}}}{{{det_A:.4f}}} = \mathbf{{{x_i:.4f}}}")
+                    st.divider()
                     
         elif metodo_sel == "Gauss":
+            st.subheader("Procedimiento y Resultados:")
             Ab = np.column_stack((A, B))
-            st.write("Matriz Aumentada inicial [A | B]:")
-            st.write(np.round(Ab, 4))
+            st.write("Matriz Aumentada inicial $[A | B]$:")
+            st.latex(matrix_to_latex(Ab))
             for i in range(n):
                 for j in range(i+1, n):
                     factor = Ab[j, i] / Ab[i, i]
                     Ab[j] = Ab[j] - factor * Ab[i]
                     st.text(f"F{j+1} = F{j+1} - ({factor:.4f}) * F{i+1}")
             st.write("Matriz Triangulada final:")
-            st.write(np.round(Ab, 4))
+            st.latex(matrix_to_latex(Ab))
             
         elif metodo_sel == "Factorización LU":
+            st.subheader("👨‍🏫 Fundamento Matemático: Factorización LU")
+            st.info("Descompone la matriz original $A$ en el producto de una matriz triangular inferior $L$ (con unos en la diagonal) y una triangular superior $U$. Luego, resuelve el sistema en dos etapas: primero $Ly = B$ y después $Ux = y$.")
+            st.latex(r"A = L \cdot U \quad \implies \quad Ly = B, \quad Ux = y")
+            
+            st.subheader("Desarrollo paso a paso:")
             L = np.eye(n)
             U = A.copy()
+            
+            st.markdown("**1. Proceso de triangulación (Encontrando $L$ y $U$):**")
             for i in range(n):
                 for j in range(i+1, n):
+                    if U[i, i] == 0:
+                        st.error("División por cero detectada. Se requiere pivoteo (no implementado en LU básico).")
+                        st.stop()
                     factor = U[j, i] / U[i, i]
+                    
+                    st.markdown(f"$\circ \quad$ Multiplicador para fila {j+1} usando pivote en fila {i+1}:")
+                    st.latex(f"m_{{{j+1},{i+1}}} = \\frac{{{U[j,i]:.3f}}}{{{U[i,i]:.3f}}} = {factor:.4f} \quad \implies \quad F_{j+1} \\leftarrow F_{j+1} - ({factor:.4f})F_{i+1}")
+                    
                     L[j, i] = factor
                     U[j] = U[j] - factor * U[i]
-            st.write("**Matriz L (Inferior):**")
-            st.write(np.round(L, 4))
-            st.write("**Matriz U (Superior):**")
-            st.write(np.round(U, 4))
-            # Resolución con numpy solve para mostrar la respuesta limpia
-            x = np.linalg.solve(A, B)
+                    
+            st.markdown("**Matrices resultantes de la factorización:**")
+            col_l, col_u = st.columns(2)
+            with col_l:
+                st.markdown("**Matriz $L$ (Inferior):**")
+                st.latex(matrix_to_latex(L))
+            with col_u:
+                st.markdown("**Matriz $U$ (Superior):**")
+                st.latex(matrix_to_latex(U))
+                
+            st.markdown("**2. Sustitución hacia adelante ($Ly = B$):**")
+            y = np.linalg.solve(L, B)
+            st.latex(f"y = {matrix_to_latex(y)}")
+            
+            st.markdown("**3. Sustitución hacia atrás ($Ux = y$):**")
+            x = np.linalg.solve(U, y)
+            st.latex(f"x = {matrix_to_latex(x)}")
+            
             st.success("Solución final del sistema:")
-            for i in range(n):
-                st.write(f"x{i+1} = {x[i]:.4f}")
-
+            res_str = ", \ ".join([f"x_{i+1} = {x[i]:.4f}" for i in range(n)])
+            st.markdown(f"${res_str}$")
+            
 # =====================================================================
 # PESTAÑA 2: MÉTODOS ITERATIVOS (Jacobi y Gauss-Seidel)
 # =====================================================================
@@ -200,7 +247,7 @@ with tab2:
                     st.success(f"¡Convergencia lograda en la iteración {k+1}!")
                     break
                 x_old = x.copy()
-                
+
 # =====================================================================
 # PESTAÑA 3: BISECCIÓN CON GRÁFICOS WEB
 # =====================================================================

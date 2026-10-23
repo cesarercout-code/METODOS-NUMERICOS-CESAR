@@ -30,6 +30,7 @@ with tab1:
     st.write("Ingresa los coeficientes de la Matriz A y los resultados del Vector B:")
     
     # Creamos contenedores dinámicos para las entradas en la web
+    # Creamos contenedores dinámicos con valores iniciales automáticos
     matriz_A = []
     vector_B = []
     
@@ -37,11 +38,15 @@ with tab1:
         cols = st.columns(n + 2)
         fila = []
         for j in range(n):
-            val = cols[j].number_input(f"A[{i+1},{j+1}]", value=0.0, key=f"a_{i}_{j}", label_visibility="collapsed")
+            # Diagonal de 10, resto valores positivos (ej. 2, 3, 4...)
+            def_val = 10.0 if i == j else float(i + j + 1)
+            val = cols[j].number_input(f"A[{i+1},{j+1}]", value=def_val, key=f"a_{i}_{j}", label_visibility="collapsed")
             fila.append(val)
         matriz_A.append(fila)
         cols[n].text(" | ")
-        b_val = cols[n+1].number_input(f"B[{i+1}]", value=0.0, key=f"b_{i}", label_visibility="collapsed")
+        
+        # Vector B inicia en 15, 20, 25...
+        b_val = cols[n+1].number_input(f"B[{i+1}]", value=float(15 + i * 5), key=f"b_{i}", label_visibility="collapsed")
         vector_B.append(b_val)
         
     A = np.array(matriz_A, dtype=float)
@@ -203,15 +208,19 @@ with tab2:
     st.write("Ingresa los datos para Jacobi / Gauss-Seidel:")
     mat_ai = []
     vec_bi = []
+    
     for i in range(n_iter):
         cols = st.columns(n_iter + 2)
         fila = []
         for j in range(n_iter):
-            val = cols[j].number_input(f"AI[{i+1},{j+1}]", value=0.0, key=f"ai_{i}_{j}", label_visibility="collapsed")
+            # Mismo patrón diagonalmente dominante para iteraciones
+            def_val = 10.0 if i == j else float(i + j + 1)
+            val = cols[j].number_input(f"AI[{i+1},{j+1}]", value=def_val, key=f"ai_{i}_{j}", label_visibility="collapsed")
             fila.append(val)
         mat_ai.append(fila)
         cols[n_iter].text(" | ")
-        b_val = cols[n_iter+1].number_input(f"BI[{i+1}]", value=0.0, key=f"bi_{i}", label_visibility="collapsed")
+        
+        b_val = cols[n_iter+1].number_input(f"BI[{i+1}]", value=float(15 + i * 5), key=f"bi_{i}", label_visibility="collapsed")
         vec_bi.append(b_val)
         
     A_i = np.array(mat_ai)

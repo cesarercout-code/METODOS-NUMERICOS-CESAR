@@ -12,7 +12,7 @@ st.write("Herramienta interactiva para matrices, sistemas de ecuaciones, iteraci
 tab1, tab2, tab3 = st.tabs(["🧮 Sistemas Directos", "🔄 Métodos Iterativos", "📈 Búsqueda de Raíces (Bisección)"])
 
 # =====================================================================
-# PESTAÑA 1: SISTEMAS DIRECTOS (Cramer, Gauss, LU)
+# PESTAÑA 1: SISTEMAS DIRECTOS (Cramer, Gauss, Gauss-Jordan, LU)
 # =====================================================================
 def matrix_to_latex(mat):
     """Función auxiliar para convertir matrices de numpy a formato LaTeX"""
@@ -44,10 +44,10 @@ with tab1:
         b_val = cols[n+1].number_input(f"B[{i+1}]", value=0.0, key=f"b_{i}", label_visibility="collapsed")
         vector_B.append(b_val)
         
-    A = np.array(matriz_A)
-    B = np.array(vector_B)
+    A = np.array(matriz_A, dtype=float)
+    B = np.array(vector_B, dtype=float)
     
-    metodo_sel = st.selectbox("Elige el método:", ["Cramer", "Gauss", "Factorización LU"])
+    metodo_sel = st.selectbox("Elige el método:", ["Cramer", "Gauss", "Gauss-Jordan", "Factorización LU"])
     
     if st.button("Resolver Sistema Directo"):
         if metodo_sel == "Cramer":
@@ -64,29 +64,86 @@ with tab1:
                 st.error("El determinante es 0. El sistema no tiene solución única.")
             else:
                 st.markdown("**2. Cálculo de incógnitas sustituyendo el vector B:**")
+                soluciones_cramer = []
                 for i in range(n):
                     A_mod = A.copy()
                     A_mod[:, i] = B
                     det_i = np.linalg.det(A_mod)
                     x_i = det_i / det_A
+                    soluciones_cramer.append(x_i)
                     
-                    st.markdown(f"$\circ \quad$ **Cálculo de $x_{i+1}$**: Sustituyendo la columna {i+1} por el vector de resultados $B$:")
+                    st.markdown(f"$\circ \quad$ **Cálculo de $x_{i+1}$**: Sustituyendo la columna {i+1} por el vector $B$:")
                     st.latex(f"A_{{{i+1}}} = {matrix_to_latex(A_mod)} \\implies \det(A_{{{i+1}}}) = {det_i:.4f}")
                     st.latex(f"x_{{{i+1}}} = \\frac{{\det(A_{{{i+1}}})}}{{\det(A)}} = \\frac{{{det_i:.4f}}}{{{det_A:.4f}}} = \mathbf{{{x_i:.4f}}}")
                     st.divider()
+                
+                st.success("🎉 Solución final del sistema:")
+                res_str = ", \ ".join([f"x_{i+1} = {soluciones_cramer[i]:.4f}" for i in range(n)])
+                st.markdown(f"${res_str}$")
                     
         elif metodo_sel == "Gauss":
-            st.subheader("Procedimiento y Resultados:")
+            st.subheader("👨‍🏫 Fundamento Matemático: Eliminación Gaussiana")
+            st.info("Transforma el sistema en una matriz triangular superior mediante operaciones elementales de fila, y luego encuentra las incógnitas mediante sustitución hacia atrás.")
+            
             Ab = np.column_stack((A, B))
-            st.write("Matriz Aumentada inicial $[A | B]$:")
+            st.write("**1. Matriz Aumentada inicial $[A | B]$:**")
             st.latex(matrix_to_latex(Ab))
+            
+            st.write("**2. Proceso de Triangulación:**")
             for i in range(n):
                 for j in range(i+1, n):
+                    if Ab[i, i] == 0:
+                        st.error("Se encontró un 0 en el pivote. Se requiere intercambio de filas (no implementado en esta versión básica).")
+                        st.stop()
                     factor = Ab[j, i] / Ab[i, i]
                     Ab[j] = Ab[j] - factor * Ab[i]
                     st.text(f"F{j+1} = F{j+1} - ({factor:.4f}) * F{i+1}")
-            st.write("Matriz Triangulada final:")
+            
+            st.write("**Matriz Triangulada final:**")
             st.latex(matrix_to_latex(Ab))
+            
+            st.write("**3. Sustitución hacia atrás:**")
+            x_gauss = np.zeros(n)
+            for i in range(n-1, -1, -1):
+                suma = sum(Ab[i, j] * x_gauss[j] for j in range(i+1, n))
+                x_gauss[i] = (Ab[i, n] - suma) / Ab[i, i]
+                
+            st.success("🎉 Solución final del sistema:")
+            res_str = ", \ ".join([f"x_{i+1} = {x_gauss[i]:.4f}" for i in range(n)])
+            st.markdown(f"${res_str}$")
+
+        elif metodo_sel == "Gauss-Jordan":
+            st.subheader("👨‍🏫 Fundamento Matemático: Gauss-Jordan")
+            st.info("Es una extensión del método de Gauss. Continúa realizando operaciones entre filas hasta que la matriz de coeficientes se convierte en la matriz identidad. La columna de resultados contendrá la respuesta directa sin necesidad de sustitución.")
+            
+            Ab = np.column_stack((A, B)).astype(float)
+            st.write("**1. Matriz Aumentada inicial $[A | B]$:**")
+            st.latex(matrix_to_latex(Ab))
+            
+            st.write("**2. Proceso de Eliminación completa:**")
+            for i in range(n):
+                pivote = Ab[i, i]
+                if pivote == 0:
+                    st.error("Se encontró un 0 en el pivote. Se requiere intercambio de filas.")
+                    st.stop()
+                    
+                # Convertir el pivote en 1
+                Ab[i] = Ab[i] / pivote
+                st.text(f"F{i+1} = F{i+1} / {pivote:.4f} (Normalizar pivote)")
+                
+                # Hacer ceros en toda la columna (arriba y abajo)
+                for j in range(n):
+                    if i != j:
+                        factor = Ab[j, i]
+                        Ab[j] = Ab[j] - factor * Ab[i]
+                        st.text(f"F{j+1} = F{j+1} - ({factor:.4f}) * F{i+1}")
+            
+            st.write("**Matriz Reducida (Identidad) final $[I | X]$:**")
+            st.latex(matrix_to_latex(Ab))
+            
+            st.success("🎉 Solución final del sistema:")
+            res_str = ", \ ".join([f"x_{i+1} = {Ab[i, n]:.4f}" for i in range(n)])
+            st.markdown(f"${res_str}$")
             
         elif metodo_sel == "Factorización LU":
             st.subheader("👨‍🏫 Fundamento Matemático: Factorización LU")
@@ -101,7 +158,7 @@ with tab1:
             for i in range(n):
                 for j in range(i+1, n):
                     if U[i, i] == 0:
-                        st.error("División por cero detectada. Se requiere pivoteo (no implementado en LU básico).")
+                        st.error("División por cero detectada en el pivote.")
                         st.stop()
                     factor = U[j, i] / U[i, i]
                     
@@ -128,7 +185,7 @@ with tab1:
             x = np.linalg.solve(U, y)
             st.latex(f"x = {matrix_to_latex(x)}")
             
-            st.success("Solución final del sistema:")
+            st.success("🎉 Solución final del sistema:")
             res_str = ", \ ".join([f"x_{i+1} = {x[i]:.4f}" for i in range(n)])
             st.markdown(f"${res_str}$")
 

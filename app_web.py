@@ -129,32 +129,78 @@ with tab2:
         x_old = np.zeros(n_iter)
         
         for k in range(int(max_iter)):
-            st.markdown(f"**--- Iteración {k+1} ---**")
+            st.markdown(f"### Iteración {k+1} ($k = {k}$)")
+            
             if op_iter == "Jacobi":
+                st.write("Se sustituyen los valores de la iteración anterior. Cada resultado se calcula con los valores previos:")
                 x_new = np.zeros(n_iter)
                 for i in range(n_iter):
+                    usando_list = [f"x_{j+1} = {x_old[j]:.3f}" for j in range(n_iter) if j != i]
+                    usando_str = " \text{ y } ".join(usando_list)
+                    st.markdown(f"$\circ \quad$ **Cálculo de $x_{i+1}^{({k+1})}$**: Usando ${usando_str}$")
+                    
                     suma = sum(A_i[i, j] * x_old[j] for j in range(n_iter) if j != i)
                     x_new[i] = (B_i[i] - suma) / A_i[i, i]
-                    st.text(f"  x{i+1} = ({B_i[i]} - [{suma:.4f}]) / {A_i[i,i]} = {x_new[i]:.4f}")
+                    
+                    terms = [f"{B_i[i]:.3f}"]
+                    for j in range(n_iter):
+                        if j != i:
+                            val_sub = A_i[i, j] * x_old[j]
+                            if val_sub < 0: terms.append(f"+ {abs(val_sub):.3f}")
+                            else: terms.append(f"- {abs(val_sub):.3f}")
+                    num_latex = " ".join(terms)
+                    num_val = B_i[i] - suma
+                    
+                    st.latex(f"x_{{{i+1}}}^{({k+1})} = \\frac{{{num_latex}}}{{{A_i[i,i]:.3f}}} = \\frac{{{num_val:.3f}}}{{{A_i[i,i]:.3f}}} = \mathbf{{{x_new[i]:.3f}}}")
+                    
                 error = np.max(np.abs(x_new - x_old))
-                st.text(f"  Error calculado = {error:.6f}")
+                res_str = ", \ ".join([f"x_{i+1} = {x_new[i]:.3f}" for i in range(n_iter)])
+                st.markdown(f"Resultados al final de la Iteración {k+1}: ${res_str}$.")
+                st.caption(f"Error calculado: {error:.6f}")
+                st.divider()
+                
                 if error < tol:
                     st.success(f"¡Convergencia lograda en la iteración {k+1}!")
                     break
                 x_old = x_new.copy()
+                
             else: # Gauss-Seidel
+                st.write("Se sustituyen los valores iniciales. Cada resultado nuevo se utiliza inmediatamente en la siguiente fórmula:")
                 for i in range(n_iter):
-                    suma = sum(A_i[i, j] * x[j] for j in range(n_iter) if j != i)
+                    usando_list = []
+                    for j in range(n_iter):
+                        if j != i:
+                            val_usado = x[j] if j < i else x_old[j]
+                            usando_list.append(f"x_{j+1} = {val_usado:.3f}")
+                    usando_str = " \text{ y } ".join(usando_list)
+                    st.markdown(f"$\circ \quad$ **Cálculo de $x_{i+1}^{({k+1})}$**: Usando ${usando_str}$")
+                    
+                    suma = sum(A_i[i, j] * (x[j] if j < i else x_old[j]) for j in range(n_iter) if j != i)
                     x_new_val = (B_i[i] - suma) / A_i[i, i]
-                    st.text(f"  x{i+1} = ({B_i[i]} - [{suma:.4f}]) / {A_i[i,i]} = {x_new_val:.4f}")
+                    
+                    terms = [f"{B_i[i]:.3f}"]
+                    for j in range(n_iter):
+                        if j != i:
+                            val_sub = A_i[i, j] * (x[j] if j < i else x_old[j])
+                            if val_sub < 0: terms.append(f"+ {abs(val_sub):.3f}")
+                            else: terms.append(f"- {abs(val_sub):.3f}")
+                    num_latex = " ".join(terms)
+                    num_val = B_i[i] - suma
+                    
+                    st.latex(f"x_{{{i+1}}}^{({k+1})} = \\frac{{{num_latex}}}{{{A_i[i,i]:.3f}}} = \\frac{{{num_val:.3f}}}{{{A_i[i,i]:.3f}}} = \mathbf{{{x_new_val:.3f}}}")
                     x[i] = x_new_val
+                    
                 error = np.max(np.abs(x - x_old))
-                st.text(f"  Error máximo = {error:.6f}")
+                res_str = ", \ ".join([f"x_{i+1} = {x[i]:.3f}" for i in range(n_iter)])
+                st.markdown(f"Resultados al final de la Iteración {k+1}: ${res_str}$.")
+                st.caption(f"Error calculado: {error:.6f}")
+                st.divider()
+                
                 if error < tol:
                     st.success(f"¡Convergencia lograda en la iteración {k+1}!")
                     break
                 x_old = x.copy()
-
+                
 # =====================================================================
 # PESTAÑA 3: BISECCIÓN CON GRÁFICOS WEB
 # =====================================================================

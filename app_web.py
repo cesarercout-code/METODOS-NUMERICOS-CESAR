@@ -131,7 +131,7 @@ with tab1:
             st.success("Solución final del sistema:")
             res_str = ", \ ".join([f"x_{i+1} = {x[i]:.4f}" for i in range(n)])
             st.markdown(f"${res_str}$")
-            
+
 # =====================================================================
 # PESTAÑA 2: MÉTODOS ITERATIVOS (Jacobi y Gauss-Seidel)
 # =====================================================================
@@ -249,76 +249,127 @@ with tab2:
                 x_old = x.copy()
 
 # =====================================================================
-# PESTAÑA 3: BISECCIÓN CON GRÁFICOS WEB
+# PESTAÑA 3: BISECCIÓN CON GRÁFICOS WEB (Basado en Apuntes del Pizarrón)
 # =====================================================================
 with tab3:
     st.header("Método de Bisección (Búsqueda de Raíces)")
     
-    st.info("Basado en el **Teorema del Valor Intermedio (Bolzano)**. Si $f(a) \cdot f(b) < 0$, existe al menos una raíz en el intervalo $[a, b]$.")
-    st.latex(r"c = \frac{a + b}{2} \quad \text{Error} = \left| \frac{b - a}{2} \right|")
+    st.info("Basado en el **Teorema del Valor Intermedio (Bolzano)**. Si $f(a) \cdot f(b) < 0$, existe al menos una raíz en el intervalo $[a, b]$ para una función continua.")
+    st.latex(r"\text{c.i: } [a_i, b_i] \quad \therefore c_i = \frac{a_i + b_i}{2}, \quad f(c_i)=0 \implies \text{Raíz}")
     
-    formula = st.text_input("Ingresa la función f(x):", value="x**3 - x - 2")
+    # Campo para la función (usamos np.sin para soportar funciones trigonométricas)
+    formula = st.text_input("Ingresa la función f(x) (p. ej. np.sin(x) + 2*x - 1):", value="np.sin(x) + 2*x - 1")
     
     col1, col2, col3, col4 = st.columns(4)
-    a_val = col1.number_input("Intervalo a:", value=1.0)
+    a_val = col1.number_input("Intervalo a:", value=-2.0)
     b_val = col2.number_input("Intervalo b:", value=2.0)
-    tol_bis = col3.number_input("Tolerancia Bisección:", value=0.001, format="%.4f")
-    max_bis = col4.number_input("Máx Iteraciones:", value=20, step=1)
+    tol_bis = col3.number_input("Tolerancia:", value=0.01, format="%.4f")
+    max_bis = col4.number_input("Máx Iteraciones:", value=5, step=1)
     
     def evaluar(x_num, form):
-        entorno = {"x": x_num, "np": np, "sin": np.sin, "cos": np.cos, "tan": np.tan, "exp": np.exp, "sqrt": np.sqrt}
+        entorno = {
+            "x": x_num, 
+            "np": np, 
+            "sin": np.sin, 
+            "cos": np.cos, 
+            "tan": np.tan, 
+            "exp": np.exp, 
+            "sqrt": np.sqrt,
+            "sen": np.sin  # Soporte para que acepte escribir 'sen' como en el pizarrón
+        }
         return eval(form, {"__builtins__": {}}, entorno)
 
-    if st.button("Calcular Bisección y Graficar"):
+    if st.button("Ejecutar Bisección"):
         try:
             a, b = a_val, b_val
             fa = evaluar(a, formula)
             fb = evaluar(b, formula)
             
             if fa * fb > 0:
-                st.error("f(a) y f(b) tienen el mismo signo. Elige otro intervalo.")
+                st.error("⚠️ f(a) y f(b) tienen el mismo signo. No se garantiza una raíz en este intervalo.")
             else:
-                st.subheader("👨‍🏫 Desarrollo de Iteraciones:")
+                st.subheader("👨‍🏫 Desarrollo de Iteraciones (Como en clase):")
+                
                 c_final = None
                 for k in range(int(max_bis)):
+                    i = k + 1  # Índice de iteración
                     c = (a + b) / 2
                     fc = evaluar(c, formula)
                     err = abs(b - a) / 2
                     
-                    # Decisión paso a paso
-                    if fa * fc < 0:
-                        decision = "f(a)*f(c) < 0 ➔ b cambia a c"
-                    else:
-                        decision = "f(a)*f(c) > 0 ➔ a cambia a c"
-                        
-                    st.markdown(f"**Iter {k+1}:** $c = \\frac{{{a:.4f} + {b:.4f}}}{{2}} = {c:.4f}$ | $f(c) = {fc:.4f}$ | Err= {err:.4f} | _{decision}_")
+                    # Guardamos los límites para el texto antes de actualizar
+                    a_old, b_old = a, b
+                    fa_old, fb_old = fa, fb
                     
+                    st.markdown(f"### Iteración {i} $\quad i = {i}$")
+                    st.markdown(f"**1.-** $[a_{i}, b_{i}] = [{a_old:.4f}, {b_old:.4f}]$")
+                    
+                    # Detalle del cálculo de c
+                    st.latex(f"c_{i} = \\frac{{{a_old:.4f} + {b_old:.4f}}}{{2}} = {c:.4f}")
+                    
+                    st.markdown("**3.- Evaluar (Sustituir $a, b, c$ en $f(x)$):**")
+                    st.markdown(f"$f(a_{i}) = f({a_old:.4f}) = {fa_old:.4f}$")
+                    st.markdown(f"$f(b_{i}) = f({b_old:.4f}) = {fb_old:.4f}$")
+                    st.markdown(f"$f(c_{i}) = f({c:.4f}) = {fc:.4f}$")
+                    
+                    # Decisión del cambio de intervalo
+                    if fa_old * fc < 0:
+                        decision_intervalo = f"$[a_{i+1}, b_{i+1}] = [{a_old:.4f}, {c:.4f}]$"
+                        marcador_decisivo = f"f(a_{i}) \\cdot f(c_{i}) < 0 \\implies b \\text{{ cambia a }} c"
+                    else:
+                        decision_intervalo = f"$[a_{i+1}, b_{i+1}] = [{c:.4f}, {b_old:.4f}]$"
+                        marcador_decisivo = f"f(a_{i}) \\cdot f(c_{i}) > 0 \\implies a \\text{{ cambia a }} c"
+                        
+                    st.latex(marcador_decisivo)
+                    st.markdown(f"**Siguiente Intervalo:** {decision_intervalo} (Error actual: $\\pm{err:.4f}$)")
+                    
+                    # --- DISEÑO DEL GRÁFICO TIPO PIZARRÓN ---
+                    fig, ax = plt.subplots(figsize=(6, 3))
+                    x_pts = np.linspace(a_old - 0.5, b_old + 0.5, 300)
+                    y_pts = [evaluar(x_pt, formula) for x_pt in x_pts]
+                    
+                    ax.plot(x_pts, y_pts, color="#4A90E2", linewidth=2, label="$f(x)$")
+                    ax.axhline(0, color="#2c3e50", linewidth=1)
+                    
+                    # Líneas de referencia y puntos
+                    ax.axvline(a_old, color="#c0392b", linestyle="--", alpha=0.5)
+                    ax.axvline(b_old, color="#27ae60", linestyle="--", alpha=0.5)
+                    ax.axvline(c, color="#f39c12", linestyle="--", alpha=0.7)
+                    
+                    ax.scatter([a_old, b_old, c], [fa_old, fb_old, fc], color=["#c0392b", "#27ae60", "#f39c12"], s=60, zorder=5)
+                    
+                    # Etiquetas de coordenadas
+                    ax.text(a_old, fa_old, f" (a, f(a))\n ({a_old:.1f}, {fa_old:.2f})", color="#c0392b", fontsize=8, ha="right")
+                    ax.text(b_old, fb_old, f" (b, f(b))\n ({b_old:.1f}, {fb_old:.2f})", color="#27ae60", fontsize=8, ha="left")
+                    ax.text(c, fc, f" (c, f(c))\n ({c:.1f}, {fc:.2f})", color="#f39c12", fontsize=8, ha="center")
+                    
+                    # Resaltar intervalo y decisión
+                    ax.axvspan(a_old, b_old, color="#f1c40f", alpha=0.1)
+                    if fa_old * fc < 0:
+                        ax.annotate(f"Nuevo: [{a_old:.2f}, {c:.2f}]", xy=((a_old + c)/2, 0), xytext=((a_old + c)/2, max(y_pts)*0.3),
+                                    arrowprops=dict(facecolor="#2980b9", shrink=0.05, width=1, headwidth=6), color="#2980b9", ha="center")
+                    else:
+                        ax.annotate(f"Nuevo: [{c:.2f}, {b_old:.2f}]", xy=((c + b_old)/2, 0), xytext=((c + b_old)/2, max(y_pts)*0.3),
+                                    arrowprops=dict(facecolor="#2980b9", shrink=0.05, width=1, headwidth=6), color="#2980b9", ha="center")
+                    
+                    ax.set_title(f"Visualización Iteración {i}", fontsize=9)
+                    ax.grid(True, linestyle=":", alpha=0.6)
+                    st.pyplot(fig)
+                    st.divider()
+                    
+                    # Verificar criterio de parada
                     if err < tol_bis or abs(fc) < 1e-9:
                         c_final = c
-                        st.success(f"Raíz encontrada en x = {c:.6f}")
+                        st.success(f"🎉 ¡Convergencia lograda! Raíz estimada en c = {c:.6f} con error de ±{err:.6f}")
                         break
-                    if fa * fc < 0:
+                        
+                    # Actualización de intervalos
+                    if fa_old * fc < 0:
                         b = c
+                        fb = fc
                     else:
                         a = c
                         fa = fc
-                
-                st.subheader("Visualización Gráfica:")
-                fig, ax = plt.subplots(figsize=(8, 4))
-                x_pts = np.linspace(a_val - 1, b_val + 1, 300)
-                y_pts = [evaluar(x_pt, formula) for x_pt in x_pts]
-                
-                ax.plot(x_pts, y_pts, label=f"f(x) = {formula}", color="blue")
-                ax.axhline(0, color="black", linewidth=1)
-                ax.axvspan(a_val, b_val, color="yellow", alpha=0.3, label="Intervalo inicial")
-                if c_final is not None:
-                    ax.scatter([c_final], [evaluar(c_final, formula)], color="green", s=100, zorder=5, label=f"Raíz: {c_final:.4f}")
-                
-                ax.set_xlabel("x")
-                ax.set_ylabel("f(x)")
-                ax.legend()
-                ax.grid(True)
-                st.pyplot(fig)
-                
+                        
         except Exception as ex:
-            st.error(f"Revisa tu fórmula o valores. Detalle: {ex}")
+            st.error(f"Revisa tu fórmula o los valores de los intervalos. Detalle técnico: {ex}")

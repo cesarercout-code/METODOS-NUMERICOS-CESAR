@@ -315,23 +315,30 @@ with tab2:
                 x_old = x.copy()
 
 # =====================================================================
-# PESTAÑA 3: BISECCIÓN CON GRÁFICOS WEB (Basado en Apuntes del Pizarrón)
+# PESTAÑA 3: BÚSQUEDA DE RAÍCES (Bisección, Falsa Posición, Newton-Raphson)
 # =====================================================================
 with tab3:
-    st.header("Método de Bisección (Búsqueda de Raíces)")
+    st.header("Métodos Numéricos para Búsqueda de Raíces")
     
-    st.info("Basado en el **Teorema del Valor Intermedio (Bolzano)**. Si $f(a) \cdot f(b) < 0$, existe al menos una raíz en el intervalo $[a, b]$ para una función continua.")
-    st.latex(r"\text{c.i: } [a_i, b_i] \quad \therefore c_i = \frac{a_i + b_i}{2}, \quad f(c_i)=0 \implies \text{Raíz}")
+    metodo_raiz = st.radio("Selecciona el método a utilizar:", 
+                           ["Bisección", "Falsa Posición", "Newton-Raphson"], horizontal=True)
     
-    # Campo para la función (usamos np.sin para soportar funciones trigonométricas)
-    formula = st.text_input("Ingresa la función f(x) (p. ej. np.sin(x) + 2*x - 1):", value="np.sin(x) + 2*x - 1")
+    formula = st.text_input("Ingresa la función f(x) (p. ej. e**-x - x):", value="e**-x - x")
     
-    col1, col2, col3, col4 = st.columns(4)
-    a_val = col1.number_input("Intervalo a:", value=-2.0)
-    b_val = col2.number_input("Intervalo b:", value=2.0)
-    tol_bis = col3.number_input("Tolerancia:", value=0.01, format="%.4f")
-    max_bis = col4.number_input("Máx Iteraciones:", value=5, step=1)
-    
+    # --- Interfaz adaptativa según el método ---
+    if metodo_raiz in ["Bisección", "Falsa Posición"]:
+        col1, col2, col3, col4 = st.columns(4)
+        a_val = col1.number_input("Intervalo a:", value=-1.0, format="%.4f")
+        b_val = col2.number_input("Intervalo b:", value=1.0, format="%.4f")
+        tol_raiz = col3.number_input("Tolerancia % (E_s):", value=1.0, format="%.4f")
+        max_iter = col4.number_input("Máx Iteraciones:", value=5, step=1)
+    else: # Newton-Raphson
+        formula_deriv = st.text_input("Ingresa la derivada f'(x) (p. ej. -e**-x - 1):", value="-e**-x - 1")
+        col1, col2, col3 = st.columns(3)
+        x0_val = col1.number_input("Valor inicial x0:", value=0.0, format="%.4f")
+        tol_raiz = col2.number_input("Tolerancia % (E_s):", value=1.0, format="%.4f")
+        max_iter = col3.number_input("Máx Iteraciones:", value=5, step=1)
+
     def evaluar(x_num, form):
         entorno = {
             "x": x_num, 
@@ -341,101 +348,165 @@ with tab3:
             "tan": np.tan, 
             "exp": np.exp, 
             "sqrt": np.sqrt,
-            "sen": np.sin  # Soporte para que acepte escribir 'sen' como en el pizarrón
+            "sen": np.sin,
+            "e": np.e
         }
         return eval(form, {"__builtins__": {}}, entorno)
 
-    if st.button("Ejecutar Bisección"):
+    if st.button("Ejecutar Método"):
         try:
-            a, b = a_val, b_val
-            fa = evaluar(a, formula)
-            fb = evaluar(b, formula)
-            
-            if fa * fb > 0:
-                st.error("⚠️ f(a) y f(b) tienen el mismo signo. No se garantiza una raíz en este intervalo.")
-            else:
-                st.subheader("👨‍🏫 Desarrollo de Iteraciones (Como en clase):")
+            # ==============================================================
+            # LÓGICA BISECCIÓN Y FALSA POSICIÓN
+            # ==============================================================
+            if metodo_raiz in ["Bisección", "Falsa Posición"]:
+                a, b = a_val, b_val
+                fa = evaluar(a, formula)
+                fb = evaluar(b, formula)
                 
-                c_final = None
-                for k in range(int(max_bis)):
-                    i = k + 1  # Índice de iteración
-                    c = (a + b) / 2
-                    fc = evaluar(c, formula)
-                    err = abs(b - a) / 2
+                if fa * fb > 0:
+                    st.error("⚠️ f(a) y f(b) tienen el mismo signo. No se garantiza una raíz en este intervalo.")
+                else:
+                    st.subheader(f"👨‍🏫 Desarrollo de Iteraciones: {metodo_raiz}")
                     
-                    # Guardamos los límites para el texto antes de actualizar
-                    a_old, b_old = a, b
-                    fa_old, fb_old = fa, fb
-                    
-                    st.markdown(f"### Iteración {i} $\quad i = {i}$")
-                    st.markdown(f"**1.-** $[a_{i}, b_{i}] = [{a_old:.4f}, {b_old:.4f}]$")
-                    
-                    # Detalle del cálculo de c
-                    st.latex(f"c_{i} = \\frac{{{a_old:.4f} + {b_old:.4f}}}{{2}} = {c:.4f}")
-                    
-                    st.markdown("**3.- Evaluar (Sustituir $a, b, c$ en $f(x)$):**")
-                    st.markdown(f"$f(a_{i}) = f({a_old:.4f}) = {fa_old:.4f}$")
-                    st.markdown(f"$f(b_{i}) = f({b_old:.4f}) = {fb_old:.4f}$")
-                    st.markdown(f"$f(c_{i}) = f({c:.4f}) = {fc:.4f}$")
-                    
-                    # Decisión del cambio de intervalo
-                    if fa_old * fc < 0:
-                        decision_intervalo = f"$[a_{i+1}, b_{i+1}] = [{a_old:.4f}, {c:.4f}]$"
-                        marcador_decisivo = f"f(a_{i}) \\cdot f(c_{i}) < 0 \\implies b \\text{{ cambia a }} c"
+                    if metodo_raiz == "Bisección":
+                        st.latex(r"c_i = \frac{a_i + b_i}{2}")
                     else:
-                        decision_intervalo = f"$[a_{i+1}, b_{i+1}] = [{c:.4f}, {b_old:.4f}]$"
-                        marcador_decisivo = f"f(a_{i}) \\cdot f(c_{i}) > 0 \\implies a \\text{{ cambia a }} c"
-                        
-                    st.latex(marcador_decisivo)
-                    st.markdown(f"**Siguiente Intervalo:** {decision_intervalo} (Error actual: $\\pm{err:.4f}$)")
+                        st.latex(r"x_r = \frac{a_i \cdot f(b_i) - b_i \cdot f(a_i)}{f(b_i) - f(a_i)}")
                     
-                    # --- DISEÑO DEL GRÁFICO TIPO PIZARRÓN ---
+                    prev_xr = None
+                    for k in range(int(max_iter)):
+                        i = k + 1
+                        fa_old, fb_old = evaluar(a, formula), evaluar(b, formula)
+                        
+                        if metodo_raiz == "Bisección":
+                            xr = (a + b) / 2
+                        else: # Falsa Posición
+                            xr = (a * fb_old - b * fa_old) / (fb_old - fa_old)
+                            
+                        fxr = evaluar(xr, formula)
+                        
+                        # Cálculo del error relativo aproximado (Ea)
+                        ea = 100.0 if prev_xr is None else abs((xr - prev_xr) / xr) * 100
+                        
+                        st.markdown(f"### Iteración {i} $\quad \therefore i = {i}$")
+                        st.markdown(f"**1:** $[a_{i}, b_{i}] = [{a:.6f}, {b:.6f}]$")
+                        st.markdown(f"**2:** $f(a_{i}) = {fa_old:.6f} \quad ; \quad f(b_{i}) = {fb_old:.6f}$")
+                        
+                        if metodo_raiz == "Bisección":
+                            st.latex(f"c = \\frac{{{a:.6f} + {b:.6f}}}{{2}} = {xr:.6f}")
+                        else:
+                            st.latex(f"x_r = \\frac{{({a:.6f})({fb_old:.6f}) - ({b:.6f})({fa_old:.6f})}}{{{fb_old:.6f} - ({fa_old:.6f})}} = {xr:.6f}")
+                        
+                        st.markdown(f"**4: Evaluar**")
+                        st.markdown(f"$f(x_r) = f({xr:.6f}) = {fxr:.6f}$")
+                        
+                        # Análisis de signos
+                        prod = fa_old * fxr
+                        signo_prod = "\\le 0" if prod <= 0 else "> 0"
+                        st.markdown(f"Analizamos: $f(a_i) \cdot f(x_r) = ({fa_old:.6f}) \cdot ({fxr:.6f}) {signo_prod}$")
+                        
+                        if prod <= 0:
+                            st.markdown(f"$\therefore$ Nuevo intervalo: $[{a:.6f}, {xr:.6f}]$")
+                        else:
+                            st.markdown(f"$\therefore$ Nuevo intervalo: $[{xr:.6f}, {b:.6f}]$")
+                            
+                        if i > 1:
+                            st.markdown(f"**5:** $E_a = \\left| \\frac{{{xr:.6f} - {prev_xr:.6f}}}{{{xr:.6f}}} \\right| \\cdot 100 = {ea:.2f}\\%$")
+                            
+                        # Gráfico visual de la iteración
+                        fig, ax = plt.subplots(figsize=(6, 3))
+                        x_pts = np.linspace(a - 0.5, b + 0.5, 300)
+                        y_pts = [evaluar(x_pt, formula) for x_pt in x_pts]
+                        
+                        ax.plot(x_pts, y_pts, color="#4A90E2", linewidth=2, label="$f(x)$")
+                        ax.axhline(0, color="black", linewidth=1)
+                        
+                        if metodo_raiz == "Falsa Posición":
+                            # Dibuja la línea recta que conecta los puntos
+                            ax.plot([a, b], [fa_old, fb_old], color="#c0392b", linestyle="--", alpha=0.7, label="Secante")
+                            
+                        ax.scatter([a, b, xr], [fa_old, fb_old, fxr], color=["#c0392b", "#27ae60", "#f39c12"], zorder=5)
+                        ax.axvline(xr, color="#f39c12", linestyle=":", alpha=0.7)
+                        
+                        ax.set_title(f"Iteración {i}", fontsize=9)
+                        ax.grid(True, linestyle=":", alpha=0.6)
+                        if metodo_raiz == "Falsa Posición":
+                            ax.legend()
+                        st.pyplot(fig)
+                        st.divider()
+                        
+                        # Actualización de valores
+                        if ea <= tol_raiz and i > 1:
+                            st.success(f"🎉 Condición cumplida ($E_a = {ea:.2f}\\% \le {tol_raiz}\\%$). Raíz en: {xr:.6f}")
+                            break
+                            
+                        if prod <= 0:
+                            b = xr
+                        else:
+                            a = xr
+                            
+                        prev_xr = xr
+
+            # ==============================================================
+            # LÓGICA NEWTON-RAPHSON
+            # ==============================================================
+            elif metodo_raiz == "Newton-Raphson":
+                st.subheader(f"👨‍🏫 Desarrollo de Iteraciones: Newton-Raphson")
+                st.latex(r"x_{i+1} = x_i - \frac{f(x_i)}{f'(x_i)}")
+                
+                xi = x0_val
+                
+                for k in range(int(max_iter)):
+                    i = k + 1
+                    
+                    f_xi = evaluar(xi, formula)
+                    df_xi = evaluar(xi, formula_deriv)
+                    
+                    if df_xi == 0:
+                        st.error(f"La derivada se hace cero en x={xi:.6f}. El método falla.")
+                        break
+                        
+                    xi_next = xi - (f_xi / df_xi)
+                    
+                    ea = abs((xi_next - xi) / xi_next) * 100 if xi_next != 0 else 100.0
+                    
+                    st.markdown(f"### Iteración {i}")
+                    st.markdown(f"$x_{k} = {xi:.6f}$")
+                    st.markdown(f"$f(x_{k}) = {f_xi:.6f}$")
+                    st.markdown(f"$f'(x_{k}) = {df_xi:.6f}$")
+                    
+                    st.latex(f"x_{k+1} = {xi:.6f} - \\frac{{{f_xi:.6f}}}{{{df_xi:.6f}}} = {xi_next:.6f}")
+                    st.markdown(f"$E_a = {ea:.2f}\\%$")
+                    
+                    # Gráfico
                     fig, ax = plt.subplots(figsize=(6, 3))
-                    x_pts = np.linspace(a_old - 0.5, b_old + 0.5, 300)
+                    x_span = abs(xi_next - xi) * 2 if xi_next != xi else 1
+                    x_pts = np.linspace(min(xi, xi_next) - x_span, max(xi, xi_next) + x_span, 300)
                     y_pts = [evaluar(x_pt, formula) for x_pt in x_pts]
                     
                     ax.plot(x_pts, y_pts, color="#4A90E2", linewidth=2, label="$f(x)$")
-                    ax.axhline(0, color="#2c3e50", linewidth=1)
+                    ax.axhline(0, color="black", linewidth=1)
                     
-                    # Líneas de referencia y puntos
-                    ax.axvline(a_old, color="#c0392b", linestyle="--", alpha=0.5)
-                    ax.axvline(b_old, color="#27ae60", linestyle="--", alpha=0.5)
-                    ax.axvline(c, color="#f39c12", linestyle="--", alpha=0.7)
+                    # Recta tangente
+                    # y - y1 = m(x - x1)  =>  y = m(x - x1) + y1
+                    y_tangente = [df_xi * (pt - xi) + f_xi for pt in x_pts]
+                    ax.plot(x_pts, y_tangente, color="#c0392b", linestyle="--", label="Tangente")
                     
-                    ax.scatter([a_old, b_old, c], [fa_old, fb_old, fc], color=["#c0392b", "#27ae60", "#f39c12"], s=60, zorder=5)
+                    ax.scatter([xi, xi_next], [f_xi, 0], color=["#c0392b", "#f39c12"], zorder=5)
+                    ax.axvline(xi, color="#c0392b", linestyle=":", alpha=0.3)
+                    ax.axvline(xi_next, color="#f39c12", linestyle=":", alpha=0.7)
                     
-                    # Etiquetas de coordenadas
-                    ax.text(a_old, fa_old, f" (a, f(a))\n ({a_old:.1f}, {fa_old:.2f})", color="#c0392b", fontsize=8, ha="right")
-                    ax.text(b_old, fb_old, f" (b, f(b))\n ({b_old:.1f}, {fb_old:.2f})", color="#27ae60", fontsize=8, ha="left")
-                    ax.text(c, fc, f" (c, f(c))\n ({c:.1f}, {fc:.2f})", color="#f39c12", fontsize=8, ha="center")
-                    
-                    # Resaltar intervalo y decisión
-                    ax.axvspan(a_old, b_old, color="#f1c40f", alpha=0.1)
-                    if fa_old * fc < 0:
-                        ax.annotate(f"Nuevo: [{a_old:.2f}, {c:.2f}]", xy=((a_old + c)/2, 0), xytext=((a_old + c)/2, max(y_pts)*0.3),
-                                    arrowprops=dict(facecolor="#2980b9", shrink=0.05, width=1, headwidth=6), color="#2980b9", ha="center")
-                    else:
-                        ax.annotate(f"Nuevo: [{c:.2f}, {b_old:.2f}]", xy=((c + b_old)/2, 0), xytext=((c + b_old)/2, max(y_pts)*0.3),
-                                    arrowprops=dict(facecolor="#2980b9", shrink=0.05, width=1, headwidth=6), color="#2980b9", ha="center")
-                    
-                    ax.set_title(f"Visualización Iteración {i}", fontsize=9)
+                    ax.set_title(f"Iteración {i}", fontsize=9)
                     ax.grid(True, linestyle=":", alpha=0.6)
+                    ax.legend()
                     st.pyplot(fig)
                     st.divider()
                     
-                    # Verificar criterio de parada
-                    if err < tol_bis or abs(fc) < 1e-9:
-                        c_final = c
-                        st.success(f"🎉 ¡Convergencia lograda! Raíz estimada en c = {c:.6f} con error de ±{err:.6f}")
+                    if ea <= tol_raiz:
+                        st.success(f"🎉 Condición cumplida ($E_a = {ea:.2f}\\% \le {tol_raiz}\\%$). Raíz en: {xi_next:.6f}")
                         break
                         
-                    # Actualización de intervalos
-                    if fa_old * fc < 0:
-                        b = c
-                        fb = fc
-                    else:
-                        a = c
-                        fa = fc
-                        
+                    xi = xi_next
+
         except Exception as ex:
-            st.error(f"Revisa tu fórmula o los valores de los intervalos. Detalle técnico: {ex}")
+            st.error(f"Revisa tu fórmula o los valores de entrada. Detalle técnico: {ex}")
